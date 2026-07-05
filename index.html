@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <title>智能健身膳食系统</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        :root {
+            --apple-bg: #f5f5f7;
+            --apple-card: rgba(255, 255, 255, 0.9);
+            --apple-text: #1d1d1f;
+            --apple-text-secondary: #86868b;
+            --apple-accent: #0071e3;
+            --radius-main: 24px;
+            --radius-sub: 14px;
+        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--apple-bg); color: var(--apple-text); margin: 0; padding: 40px 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 740px; background: var(--apple-card); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 40px; border-radius: var(--radius-main); box-shadow: 0 20px 50px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.5); }
+        h1 { font-size: 26px; font-weight: 600; text-align: center; margin-bottom: 6px; color: #000; letter-spacing: -0.5px; }
+        .subtitle { font-size: 13px; text-align: center; color: var(--apple-text-secondary); margin-bottom: 35px; }
+
+        .form-group { margin-bottom: 24px; }
+        label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: var(--apple-text); padding-left: 2px; }
+        input[type="text"] { width: 100%; padding: 14px 16px; border: 1px solid rgba(0,0,0,0.1); border-radius: var(--radius-sub); font-size: 15px; background: rgba(0,0,0,0.01); transition: all 0.25s ease; color: var(--apple-text); }
+        input[type="text"]:focus { border-color: var(--apple-accent); background: #fff; outline: none; box-shadow: 0 0 0 4px rgba(0,113,227,0.12); }
+
+        .upload-area { position: relative; border: 2px dashed rgba(0,0,0,0.12); background: rgba(0,0,0,0.01); border-radius: var(--radius-sub); padding: 45px 20px; text-align: center; transition: all 0.25s ease; cursor: pointer; }
+        .upload-area:hover, .upload-area.dragover { border-color: var(--apple-accent); background: rgba(0,113,227,0.02); }
+        .upload-area input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 999; }
+
+        .upload-content { position: relative; z-index: 1; pointer-events: none; }
+        .upload-icon { font-size: 38px; margin-bottom: 8px; display: inline-block; }
+        .upload-text { font-size: 14px; color: var(--apple-text-secondary); }
+        .upload-text strong { color: var(--apple-accent); font-weight: 500; }
+
+        /* 📸 摄像头控制和显示组件样式 */
+        .camera-toggle-btn { background: rgba(0,0,0,0.05); color: var(--apple-text); padding: 10px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; transition: all 0.2s ease; }
+        .camera-toggle-btn:hover { background: rgba(0,0,0,0.09); }
+        .camera-box { display: none; margin-top: 16px; background: #000; border-radius: var(--radius-sub); overflow: hidden; position: relative; text-align: center; line-height: 0; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+        #videoStream { width: 100%; max-height: 400px; object-fit: cover; background: #000; }
+        .capture-btn { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; border: none; padding: 12px 24px; border-radius: 30px; font-weight: 600; font-size: 14px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.2s ease; z-index: 1000; display: inline-flex; align-items: center; gap: 6px; }
+        .capture-btn:hover { background: #f5f5f7; transform: translateX(-50%) scale(1.04); }
+
+        .preview-wrapper { margin-top: 16px; display: none; background: #fff; border-radius: var(--radius-sub); padding: 12px; border: 1px solid rgba(0,0,0,0.04); text-align: center; }
+        .preview-wrapper img { max-width: 100%; max-height: 200px; border-radius: 8px; object-fit: contain; }
+
+        button[type="submit"] { background: var(--apple-accent); color: white; padding: 16px; border: none; border-radius: var(--radius-sub); font-size: 16px; font-weight: 500; cursor: pointer; width: 100%; transition: all 0.25s ease; margin-top: 20px; }
+        button[type="submit"]:hover { background: #0077ed; box-shadow: 0 4px 15px rgba(0,113,227,0.2); }
+        button[type="submit"]:disabled { background: var(--apple-text-secondary); cursor: not-allowed; opacity: 0.6; }
+
+        .result-box { margin-top: 35px; padding: 30px; border-radius: var(--radius-sub); background: #fff; border: 1px solid rgba(0,0,0,0.04); display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.01); animation: slideUp 0.4s cubic-bezier(0.25, 1, 0.5, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+        .status-badge { font-size: 13px; color: var(--apple-accent); background: rgba(0,113,227,0.07); padding: 8px 14px; border-radius: 20px; font-weight: 500; display: inline-block; margin-bottom: 22px; }
+        .section-title { font-size: 16px; font-weight: 600; color: var(--apple-text); margin-top: 25px; margin-bottom: 12px; display: flex; align-items: center; }
+        .section-title::before { content: ""; width: 4px; height: 15px; background: var(--apple-accent); margin-right: 8px; border-radius: 2px; display: inline-block; }
+
+        .result-image-area { margin-bottom: 25px; text-align: center; }
+        .result-image-area img { max-width: 100%; max-height: 240px; border-radius: var(--radius-sub); box-shadow: 0 6px 16px rgba(0,0,0,0.04); }
+
+        .recipe-card { background: #fafafa; border: 1px solid rgba(0,0,0,0.02); padding: 18px; border-radius: var(--radius-sub); margin-bottom: 15px; }
+        .recipe-card-title { font-weight: 600; color: #000; font-size: 15px; margin-bottom: 10px; display: block; }
+        .recipe-detail { font-size: 14px; color: #444; margin: 6px 0; padding-left: 14px; position: relative; line-height: 1.5; }
+        .recipe-detail::before { content: "•"; position: absolute; left: 0; color: var(--apple-text-secondary); }
+
+        .advice-box { background: rgba(52, 199, 89, 0.05); border: 1px dashed rgba(52, 199, 89, 0.2); color: #1c7430; padding: 15px; border-radius: var(--radius-sub); font-size: 14px; line-height: 1.6; }
+        .warning-box { background: rgba(255, 149, 0, 0.06); border: 1px dashed rgba(255, 149, 0, 0.25); color: #b25900; padding: 15px; border-radius: var(--radius-sub); font-size: 14px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>智能健身膳食系统</h1>
+        <div class="subtitle">完全本地化多模态边缘计算端侧平台</div>
+
+        <form id="uploadForm">
+            <div class="form-group">
+                <label>💬 目标诉求 / 核心食材检索</label>
+                <input type="text" id="query" name="query" placeholder="输入特定食材，或输入‘我想减脂’、‘增肌方案’...">
+            </div>
+
+            <div class="form-group">
+                <label>📷 拍照图像多模态 analysis</label>
+                <div class="upload-area" id="dropArea">
+                    <input type="file" id="image" name="image" accept="image/*">
+                    <div class="upload-content">
+                        <span class="upload-icon">🏞️</span>
+                        <div class="upload-text" id="uploadText">将图片拖拽至此 或 <strong>点击这里上传</strong></div>
+                    </div>
+                </div>
+
+                <button type="button" class="camera-toggle-btn" id="toggleCameraBtn">📷 开启摄像头实时拍照</button>
+
+                <div class="camera-box" id="cameraBox">
+                    <video id="videoStream" autoplay playsinline muted></video>
+                    <button type="button" class="capture-btn" id="captureBtn">📸 咔嚓！捕获当前画面</button>
+                </div>
+
+                <div class="preview-wrapper" id="localPreviewWrapper">
+                    <img id="localPreviewImg" src="" alt="本地预览">
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn">开始端侧交叉检索方案</button>
+        </form>
+
+        <div class="result-box" id="resultBox">
+            <div class="status-badge" id="resAnalysis"></div>
+
+            <div class="result-image-area" id="resultImageArea">
+                <img id="resImg" src="" alt="分析快照">
+            </div>
+
+            <div id="recipeSection">
+                <div class="section-title">📋 本地专家库推荐食谱</div>
+                <div id="recipesContainer"></div>
+            </div>
+
+            <div class="section-title">💡 极简营养精算小建议</div>
+            <div id="adviceContainer"></div>
+        </div>
+    </div>
+
+    <canvas id="hiddenCanvas" style="display:none;"></canvas>
+
+    <script>
+        const fileInput = document.getElementById('image');
+        const dropArea = document.getElementById('dropArea');
+        const uploadText = document.getElementById('uploadText');
+        const wrapper = document.getElementById('localPreviewWrapper');
+        const img = document.getElementById('localPreviewImg');
+
+        // 摄像头专用 DOM 节点
+        const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+        const cameraBox = document.getElementById('cameraBox');
+        const videoStream = document.getElementById('videoStream');
+        const captureBtn = document.getElementById('captureBtn');
+        const hiddenCanvas = document.getElementById('hiddenCanvas');
+
+        let localStream = null;
+
+        // 📷 摄像头开/关控制逻辑
+        toggleCameraBtn.addEventListener('click', async function() {
+            if (localStream) {
+                stopCamera();
+            } else {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                        audio: false
+                    });
+                    videoStream.srcObject = localStream;
+                    cameraBox.style.display = 'block';
+                    toggleCameraBtn.innerText = '❌ 关闭摄像头视窗';
+                    toggleCameraBtn.style.background = 'rgba(255, 59, 48, 0.1)';
+                    toggleCameraBtn.style.color = '#ff3b30';
+                } catch (err) {
+                    console.error("无法调取摄像头硬件:", err);
+                    alert("无法获取摄像头权限，请检查浏览器权限设置或是否使用了安全环境(HTTPS/Localhost)！");
+                }
+            }
+        });
+
+        function stopCamera() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            videoStream.srcObject = null;
+            cameraBox.style.display = 'none';
+            toggleCameraBtn.innerText = '📷 开启摄像头实时拍照';
+            toggleCameraBtn.style.background = 'rgba(0,0,0,0.05)';
+            toggleCameraBtn.style.color = 'var(--apple-text)';
+        }
+
+        // 📸 实时捕获（截屏）图片逻辑
+        captureBtn.addEventListener('click', function() {
+            if (!localStream) return;
+
+            const ctx = hiddenCanvas.getContext('2d');
+            hiddenCanvas.width = videoStream.videoWidth;
+            hiddenCanvas.height = videoStream.videoHeight;
+
+            ctx.drawImage(videoStream, 0, 0, hiddenCanvas.width, hiddenCanvas.height);
+
+            hiddenCanvas.toBlob(function(blob) {
+                const capturedFile = new File([blob], "camera_capture.jpg", { type: "image/jpeg" });
+
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(capturedFile);
+                fileInput.files = dataTransfer.files;
+
+                uploadText.innerHTML = `已通过摄像头捕获: <strong>${capturedFile.name}</strong>`;
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    img.src = ev.target.result;
+                    wrapper.style.display = 'block';
+                };
+                reader.readAsDataURL(capturedFile);
+
+                stopCamera();
+
+            }, 'image/jpeg', 0.9);
+        });
+
+        // 传统图片选择变动监听
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                uploadText.innerHTML = `已选择文件: <strong>${file.name}</strong>`;
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    img.src = ev.target.result;
+                    wrapper.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                wrapper.style.display = 'none';
+                uploadText.innerHTML = '将图片拖拽至此 或 <strong>点击这里上传</strong>';
+            }
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, (e) => { e.preventDefault(); dropArea.classList.add('dragover'); }, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, (e) => { e.preventDefault(); dropArea.classList.remove('dragover'); }, false);
+        });
+
+        // 表单提交流程
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+            var resultBox = document.getElementById('resultBox');
+            var resultImgArea = document.getElementById('resultImageArea');
+            var resImg = document.getElementById('resImg');
+            var btn = document.getElementById('submitBtn');
+            var recipesContainer = document.getElementById('recipesContainer');
+            var adviceContainer = document.getElementById('adviceContainer');
+
+            btn.innerText = "正在激活端侧多模态模型预测中...";
+            btn.disabled = true;
+
+            fetch('/api/diet/analysis', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                btn.innerText = "开始端侧交叉检索方案";
+                btn.disabled = false;
+
+                if(data.status === 'success') {
+                    resultBox.style.display = 'block';
+                    document.getElementById('resAnalysis').innerText = data.llm_analysis;
+
+                    if (data.image_url) {
+                        resImg.src = data.image_url + '?t=' + new Date().getTime();
+                        resultImgArea.style.display = 'block';
+                    } else {
+                        resultImgArea.style.display = 'none';
+                    }
+
+                    recipesContainer.innerHTML = "";
+                    if (!data.recipes_list || data.recipes_list.length === 0) {
+                        recipesContainer.innerHTML = '<div style="color:#86868b;font-size:14px;padding:10px 0;">暂无匹配的本地食谱，请调整输入条件。</div>';
+                    } else if (data.recipes_list[0].提示) {
+                        const item = data.recipes_list[0];
+                        recipesContainer.innerHTML = `
+                            <div class="warning-box">
+                                <div><strong>特殊体质限制：</strong>${item.体质 || '未知'}</div>
+                                <div><strong>核心饮食禁忌：</strong>${item.禁忌 || '暂无'}</div>
+                                <div style="margin-top:5px;font-size:12px;opacity:0.8;">⚠️ 系统提示：检测到高危食材冲突风险，已启动拦截策略。</div>
+                            </div>
+                        `;
+                    } else {
+                        data.recipes_list.forEach((r, idx) => {
+                            const card = document.createElement('div');
+                            card.className = 'recipe-card';
+                            card.innerHTML = `
+                                <span class="recipe-card-title">${idx + 1}. ${r.菜谱名称} <span style="font-weight:normal;color:#86868b;font-size:13px;">(${r.本地大类标签})</span></span>
+                                <div class="recipe-detail"><strong>配料组成：</strong>${r.主要食材与配料}</div>
+                                <div class="recipe-detail"><strong>核心宏量：</strong>热量 ${r['热量(kcal)']} kcal | 蛋白 ${r['蛋白质(g)']}g | 碳水 ${r['碳水(g)']}g | 脂肪 ${r['脂肪(g)']}g</div>
+                                <div class="recipe-detail"><strong>推荐餐段与阶段：</strong>适用于【${r.推荐餐段}】的【${r['适用体质与目标(增肌/减脂)']}】阶段</div>
+                                <div class="recipe-detail"><strong>特色点评：</strong>${r.专家营养素小建议与卖点}</div>
+                            `;
+                            recipesContainer.appendChild(card);
+                        });
+                    }
+
+                    const isWarning = data.recipes_list && data.recipes_list.length > 0 && data.recipes_list[0].提示;
+                    adviceContainer.innerHTML = `<div class="${isWarning ? 'warning-box' : 'advice-box'}">${data.advice}</div>`;
+
+                    resultBox.scrollIntoView({ behavior: 'smooth' });
+                }
+            })
+            .catch(err => {
+                btn.innerText = "开始端侧交叉检索方案";
+                btn.disabled = false;
+                console.error(err);
+                alert("前后端连通异常，请检查控制台或本地环境！");
+            });
+        });
+    </script>
+</body>
+</html>
